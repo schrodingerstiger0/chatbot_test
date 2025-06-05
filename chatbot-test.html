@@ -58,7 +58,8 @@
         });
         const conversations = await response.json();
         const chatHistory = document.getElementById('chatHistory');
-        chatHistory.innerHTML = conversations.length ? '' : '<p>No conversations yet.</p>';
+        const noConversationsMessage = '<p>No conversations yet.</p>';
+        chatHistory.innerHTML = conversations.length ? '' : noConversationsMessage;
         conversations.forEach(conv => {
           chatHistory.innerHTML += `
             <div class="message user-message"><strong>You:</strong> ${conv.question}</div>
@@ -78,6 +79,9 @@
 
       questionInput.value = '';
       const chatHistory = document.getElementById('chatHistory');
+      if (chatHistory.innerHTML === '<p>No conversations yet.</p>') {
+        chatHistory.innerHTML = '';
+      }
       chatHistory.innerHTML += `<div class="message user-message"><strong>You:</strong> ${question}</div>`;
       chatHistory.scrollTop = chatHistory.scrollHeight;
 
