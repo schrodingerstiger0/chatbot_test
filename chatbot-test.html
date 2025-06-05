@@ -19,9 +19,11 @@
   <div class="chat-container">
     <h1 class="text-center mb-4">Kotton Chatbot</h1>
     <div class="mb-3">
-      <label for="userIdInput" class="form-label">Enter User ID</label>
-      <input id="userIdInput" class="form-control" placeholder="e.g., 4f67b19d-b8db-45dc-97df-608eed6f1ee9" type="text" value="4f67b19d-b8db-45dc-97df-608eed6f1ee9">
-      <button id="loadUserButton" class="btn btn-secondary mt-2">Load User</button>
+      <label for="userIdSelect" class="form-label">Select User</label>
+      <select id="userIdSelect" class="form-select">
+        <option value="">Choose a user...</option>
+      </select>
+      <button id="loadUserButton" class="btn btn-secondary mt-2" disabled>Load User</button>
     </div>
     <div id="chatHistory" class="chat-history"></div>
     <div class="input-group">
@@ -36,15 +38,39 @@
     const makeWebhookUrl = 'https://hook.eu2.make.com/xyz'; // Placeholder, update later
 
     let userId = new URLSearchParams(window.location.search).get('userId') || '';
-    const userIdInput = document.getElementById('userIdInput');
+    const userIdSelect = document.getElementById('userIdSelect');
     const loadUserButton = document.getElementById('loadUserButton');
     const questionInput = document.getElementById('questionInput');
     const sendButton = document.getElementById('sendButton');
 
-    if (userId) {
-      userIdInput.value = userId;
-      loadConversationHistory();
-      enableChat();
+    // Load users from Supabase
+    async function loadUsers() {
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/users?select=user_id,name`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          }
+        });
+        const users = await response.json();
+        userIdSelect.innerHTML = '<option value="">Choose a user...</option>';
+        users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.user_id;
+          option.textContent = `${user.name} (${user.user_id})`;
+          userIdSelect.appendChild(option);
+        });
+        if (userId) {
+          userIdSelect.value = userId;
+          loadUserButton.disabled = false;
+          loadConversationHistory();
+          enableChat();
+        }
+      } catch (error) {
+        console.error('Error loading users:', error);
+        userIdSelect.innerHTML = '<option value="">Error loading users</option>';
+      }
     }
 
     async function loadConversationHistory() {
@@ -58,8 +84,7 @@
         });
         const conversations = await response.json();
         const chatHistory = document.getElementById('chatHistory');
-        const noConversationsMessage = '<p>No conversations yet.</p>';
-        chatHistory.innerHTML = conversations.length ? '' : noConversationsMessage;
+        chatHistory.innerHTML = conversations.length ? '' : '<p>No conversations yet.</p>';
         conversations.forEach(conv => {
           chatHistory.innerHTML += `
             <div class="message user-message"><strong>You:</strong> ${conv.question}</div>
@@ -107,10 +132,14 @@
       sendButton.disabled = false;
     }
 
+    userIdSelect.addEventListener('change', () => {
+      userId = userIdSelect.value;
+      loadUserButton.disabled = !userId;
+    });
+
     loadUserButton.addEventListener('click', () => {
-      userId = userIdInput.value.trim();
       if (!userId) {
-        alert('Please enter a valid user ID.');
+        alert('Please select a user.');
         return;
       }
       loadConversationHistory();
@@ -121,6 +150,9 @@
     questionInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendQuestion();
     });
+
+    // Load users on page load
+    loadUsers();
   </script>
 </body>
 </html>
